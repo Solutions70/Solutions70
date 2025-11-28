@@ -1,0 +1,124 @@
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "dns": {
+    "servers": [
+      "8.8.8.8"
+    ]
+  },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "port": 1080,
+      "protocol": "dokodemo-door",
+      "settings": {
+        "network": "tcp,udp",
+        "followRedirect": true
+      },
+      "tag": "tun-inbound"
+    },
+    {
+      "listen": "127.0.0.1",
+      "port": 10808,
+      "protocol": "socks",
+      "settings": {
+        "auth": "noauth",
+        "udp": true
+      },
+      "tag": "socks-inbound"
+    }
+  ],
+  "outbounds": [
+    {
+      "mux": {
+        "enabled": false
+      },
+      "protocol": "trojan",
+      "proxySettings": {
+        "tag": "http-proxy",
+        "transportLayer": true
+      },
+      "settings": {
+        "servers": [
+          {
+            "address": "example.com",
+            "level": 8,
+            "password": "your-password",
+            "port": 443
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "tlsSettings": {
+          "allowInsecure": true,
+          "serverName": "example.com"
+        },
+        "wsSettings": {
+          "path": "/your-path",
+          "headers": {
+            "Host": "example.com"
+          }
+        }
+      },
+      "tag": "trojan-out"
+    },
+    {
+      "domainStrategy": "AsIs",
+      "protocol": "http",
+      "settings": {
+        "servers": [
+          {
+            "address": "proxy.example.net",
+            "port": 8080
+          }
+        ],
+        "headers": {
+          "Host": "target.example.com:443",
+          "Proxy-Connection": "keep-alive",
+          "User-Agent": "Your-User-Agent-String",
+          "X-custom-header": "custom-value"
+        }
+      },
+      "tag": "http-proxy"
+    },
+    {
+      "protocol": "freedom",
+      "tag": "direct"
+    },
+    {
+      "protocol": "blackhole",
+      "tag": "block"
+    }
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      {
+        "type": "field",
+        "protocol": ["dns"],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "tun-inbound",
+          "socks-inbound"
+        ],
+        "outboundTag": "trojan-out"
+      }
+    ]
+  },
+  "policy": {
+    "levels": {
+      "8": {
+        "connIdle": 300,
+        "downlinkOnly": 1,
+        "handshake": 4,
+        "uplinkOnly": 1
+      }
+    }
+  }
+}
